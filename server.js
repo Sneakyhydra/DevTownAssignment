@@ -5,7 +5,9 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 
-const connectDB = require('./db');
+const cloudinary = require("./config/cloudinary");
+const uploader = require("./config/multer");
+const connectDB = require('./config/db');
 connectDB();
 
 const port = process.env.PORT || 5000;
@@ -18,6 +20,7 @@ app.use(cookieParser());
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/posts', require('./routes/posts'));
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static('client/build'));
