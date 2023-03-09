@@ -1,9 +1,8 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const { check, validationResult } = require('express-validator');
 const auth = require('../middleware/auth');
 const Post = require('../models/Post');
+const Blocked = require('../models/Blocked');
 const uploader = require('../config/multer');
 const cloudinary = require('../config/cloudinary');
 
@@ -40,6 +39,12 @@ router.post(
                 return res.status(400).json({ errors: errors.array() });
             }
 
+            // Check if user is blocked
+            const blocked = await Blocked.findOne({ user: req.user_id });
+            if (blocked) {
+                return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
+            }
+
             // Check title is unique
             const posts = await Post.findOne({ title: req.body.title });
             if (posts) {
@@ -72,6 +77,12 @@ router.post(
 */
 router.get('/', auth, async (req, res) => {
     try {
+        // Check if user is blocked
+        const blocked = await Blocked.findOne({ user: req.user_id });
+        if (blocked) {
+            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
+        }
+
         const posts = await Post.find().sort({ date: -1 });
         res.json(posts);
     } catch (err) {
@@ -87,6 +98,12 @@ router.get('/', auth, async (req, res) => {
 */
 router.get('/user', auth, async (req, res) => {
     try {
+        // Check if user is blocked
+        const blocked = await Blocked.findOne({ user: req.user_id });
+        if (blocked) {
+            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
+        }
+
         const posts = await Post.find({ owner: req.user_id }).sort({ date: -1 });
 
         res.json(posts);
@@ -108,6 +125,12 @@ router.get('/user', auth, async (req, res) => {
 */
 router.get('/:id', auth, async (req, res) => {
     try {
+        // Check if user is blocked
+        const blocked = await Blocked.findOne({ user: req.user_id });
+        if (blocked) {
+            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
+        }
+
         const post = await Post.findById(req.params.id);
 
         if (!post) {
@@ -140,6 +163,12 @@ router.put(
     ], 
     async (req, res) => {
         try {
+            // Check if user is blocked
+            const blocked = await Blocked.findOne({ user: req.user_id });
+            if (blocked) {
+                return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
+            }
+
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
                 return res.status(400).json({ errors: errors.array() });
@@ -155,7 +184,8 @@ router.put(
                 }
             }
 
-            const upload = await cloudinary.uploader.upload(req.file.path, { public_id: req.body.title, invalidate: true });
+            cloudinary.uploader.destroy(post.title, function (result) { console.log(result) });
+            const upload = await cloudinary.uploader.upload(req.file.path, { public_id: req.body.title });
             console.log(upload.secure_url);
 
             post = await Post.findByIdAndUpdate(req.params.id, {
@@ -178,13 +208,19 @@ router.put(
 */
 router.delete('/:id', auth, async (req, res) => {
     try {
+        // Check if user is blocked
+        const blocked = await Blocked.findOne({ user: req.user_id });
+        if (blocked) {
+            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
+        }
+
         let post = await Post.findById(req.params.id);
 
         if (!post) {
             return res.status(404).json({ msg: 'Post not found' });
         }
 
-        if (post.owner.toString() !== req.user_id) {
+        if (post.owner.toString() !== req.user_id && req.user_role !== 'moderator') {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 
@@ -211,6 +247,12 @@ router.delete('/:id', auth, async (req, res) => {
 */
 router.put('/react/:id', auth, async (req, res) => {
     try {
+        // Check if user is blocked
+        const blocked = await Blocked.findOne({ user: req.user_id });
+        if (blocked) {
+            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
+        }
+
         const post = await Post.findById(req.params.id);
 
         if (post.likes.filter(like => like.user.toString() === req.user_id).length > 0) {
@@ -250,7 +292,18 @@ router.post(
         }
 
         try {
+            // Check if user is blocked
+            const blocked = await Blocked.findOne({ user: req.user_id });
+            if (blocked) {
+                return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
+            }
+
             const post = await Post.findById(req.params.id);
+
+            // Check if user has already commented
+            if (post.comments.filter(comment => comment.owner.toString() === req.user_id).length > 0) {
+                return res.status(400).json({ errors: [{ msg: 'You have already commented on this post' }] });
+            }
 
             const newComment = {
                 text: req.body.text,
@@ -278,6 +331,12 @@ router.post(
 */
 router.delete('/comment/:id/:comment_id', auth, async (req, res) => {
     try {
+        // Check if user is blocked
+        const blocked = await Blocked.findOne({ user: req.user_id });
+        if (blocked) {
+            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
+        }
+
         const post = await Post.findById(req.params.id);
 
         const comment = post.comments.find(comment => comment.id === req.params.comment_id);
@@ -286,7 +345,7 @@ router.delete('/comment/:id/:comment_id', auth, async (req, res) => {
             return res.status(404).json({ msg: 'Comment does not exist' });
         }
 
-        if (comment.owner.toString() !== req.user_id) {
+        if (comment.owner.toString() !== req.user_id && req.user_role !== 'moderator') {
             return res.status(401).json({ msg: 'Not authorized' });
         }
 

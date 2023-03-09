@@ -76,6 +76,7 @@ router.post(
 
       const payload = {
         id: user.id,
+        role: user.role,
       };
 
       const token = jwt.sign(payload, process.env.JWT_SECRET, {
