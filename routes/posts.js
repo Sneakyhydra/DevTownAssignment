@@ -1,8 +1,8 @@
 const express = require('express');
 const { check, validationResult } = require('express-validator');
 const auth = require('../middleware/auth');
+const blocked = require('../middleware/blocked');
 const Post = require('../models/Post');
-const Blocked = require('../models/Blocked');
 const uploader = require('../config/multer');
 const cloudinary = require('../config/cloudinary');
 
@@ -30,19 +30,14 @@ router.post(
     [
         uploader.single('file'),
         check('title', 'Please enter a title').notEmpty(),
-        auth
+        auth,
+        blocked
     ],
     async (req, res) => {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
                 return res.status(400).json({ errors: errors.array() });
-            }
-
-            // Check if user is blocked
-            const blocked = await Blocked.findOne({ user: req.user_id });
-            if (blocked) {
-                return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
             }
 
             // Check title is unique
@@ -75,14 +70,8 @@ router.post(
  * @desc Get all posts
  * @access Private
 */
-router.get('/', auth, async (req, res) => {
+router.get('/', [auth, blocked], async (req, res) => {
     try {
-        // Check if user is blocked
-        const blocked = await Blocked.findOne({ user: req.user_id });
-        if (blocked) {
-            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
-        }
-
         const posts = await Post.find().sort({ date: -1 });
         res.json(posts);
     } catch (err) {
@@ -96,14 +85,8 @@ router.get('/', auth, async (req, res) => {
  * @desc Get posts created by a user
  * @access Private
 */
-router.get('/user', auth, async (req, res) => {
+router.get('/user', [auth, blocked], async (req, res) => {
     try {
-        // Check if user is blocked
-        const blocked = await Blocked.findOne({ user: req.user_id });
-        if (blocked) {
-            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
-        }
-
         const posts = await Post.find({ owner: req.user_id }).sort({ date: -1 });
 
         res.json(posts);
@@ -123,14 +106,8 @@ router.get('/user', auth, async (req, res) => {
  * @desc Get a post
  * @access Private
 */
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', [auth, blocked], async (req, res) => {
     try {
-        // Check if user is blocked
-        const blocked = await Blocked.findOne({ user: req.user_id });
-        if (blocked) {
-            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
-        }
-
         const post = await Post.findById(req.params.id);
 
         if (!post) {
@@ -159,16 +136,11 @@ router.put(
     [
     uploader.single('file'),
     check('title', 'Please enter a title').notEmpty(),
-    auth
+    auth,
+    blocked
     ], 
     async (req, res) => {
         try {
-            // Check if user is blocked
-            const blocked = await Blocked.findOne({ user: req.user_id });
-            if (blocked) {
-                return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
-            }
-
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
                 return res.status(400).json({ errors: errors.array() });
@@ -206,14 +178,8 @@ router.put(
  * @desc Delete a post
  * @access Private
 */
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', [auth, blocked], async (req, res) => {
     try {
-        // Check if user is blocked
-        const blocked = await Blocked.findOne({ user: req.user_id });
-        if (blocked) {
-            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
-        }
-
         let post = await Post.findById(req.params.id);
 
         if (!post) {
@@ -245,14 +211,8 @@ router.delete('/:id', auth, async (req, res) => {
  * @desc React to a post
  * @access Private
 */
-router.put('/react/:id', auth, async (req, res) => {
+router.put('/react/:id', [auth, blocked], async (req, res) => {
     try {
-        // Check if user is blocked
-        const blocked = await Blocked.findOne({ user: req.user_id });
-        if (blocked) {
-            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
-        }
-
         const post = await Post.findById(req.params.id);
 
         if (post.likes.filter(like => like.user.toString() === req.user_id).length > 0) {
@@ -283,7 +243,8 @@ router.post(
     '/comment/:id',
     [
         check('text', 'Please enter a comment').notEmpty(),
-        auth
+        auth,
+        blocked
     ],
     async (req, res) => {
         const errors = validationResult(req);
@@ -292,12 +253,6 @@ router.post(
         }
 
         try {
-            // Check if user is blocked
-            const blocked = await Blocked.findOne({ user: req.user_id });
-            if (blocked) {
-                return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
-            }
-
             const post = await Post.findById(req.params.id);
 
             // Check if user has already commented
@@ -329,14 +284,8 @@ router.post(
  * @desc Delete a comment
  * @access Private
 */
-router.delete('/comment/:id/:comment_id', auth, async (req, res) => {
+router.delete('/comment/:id/:comment_id', [auth, blocked], async (req, res) => {
     try {
-        // Check if user is blocked
-        const blocked = await Blocked.findOne({ user: req.user_id });
-        if (blocked) {
-            return res.status(400).json({ errors: [{ msg: 'You are blocked' }] });
-        }
-
         const post = await Post.findById(req.params.id);
 
         const comment = post.comments.find(comment => comment.id === req.params.comment_id);
