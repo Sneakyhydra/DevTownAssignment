@@ -47,8 +47,8 @@ const AuthState = (props) => {
     }
   };
 
-  // Register Student
-  const regStudent = async (formData) => {
+  // Register User
+  const registerUser = async (formData) => {
     // Set header of the input data
     const config = {
       headers: {
@@ -57,8 +57,8 @@ const AuthState = (props) => {
     };
 
     try {
-      // Make a post request at localhost:5000/api/users/student
-      const res = await axios.post("api/users/student", formData, config);
+      // Make a post request at localhost:5000/api/users/user
+      const res = await axios.post("api/users/user", formData, config);
 
       // Dispatch the action to reducer for REGISTER_SUCCESS
       dispatch({
@@ -72,13 +72,13 @@ const AuthState = (props) => {
       // Dispatch the action to reducer for REGISTER_FAIL
       dispatch({
         type: REGISTER_FAIL,
-        payload: err.response.data.msg,
+        payload: err.response.data.errors[0].msg,
       });
     }
   };
 
-  // Register Counsellor
-  const regCounsellor = async (formData) => {
+  // Register Moderator
+  const registerMod = async (formData) => {
     // Set header of the input data
     const config = {
       headers: {
@@ -87,8 +87,11 @@ const AuthState = (props) => {
     };
 
     try {
-      // Make a post request at localhost:5000/api/users/counsellor
-      const res = await axios.post("api/users/counsellor", formData, config);
+      // Add role to formData
+      formData.role = "moderator";
+
+      // Make a post request at localhost:5000/api/users/moderator
+      const res = await axios.post("api/users/moderator", formData, config);
 
       // Dispatch the action to reducer for REGISTER_SUCCESS
       dispatch({
@@ -102,37 +105,7 @@ const AuthState = (props) => {
       // Dispatch the action to reducer for REGISTER_FAIL
       dispatch({
         type: REGISTER_FAIL,
-        payload: err.response.data.msg,
-      });
-    }
-  };
-
-  // Register Admin
-  const regAdmin = async (formData) => {
-    // Set header of the input data
-    const config = {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-
-    try {
-      // Make a post request at localhost:5000/api/users/admin1234
-      const res = await axios.post("api/users/admin1234", formData, config);
-
-      // Dispatch the action to reducer for REGISTER_SUCCESS
-      dispatch({
-        type: REGISTER_SUCCESS,
-        payload: res.data,
-      });
-
-      // Load the user after successful registration
-      loadUser();
-    } catch (err) {
-      // Dispatch the action to reducer for REGISTER_FAIL
-      dispatch({
-        type: REGISTER_FAIL,
-        payload: err.response.data.msg,
+        payload: err.response.data.errors[0].msg,
       });
     }
   };
@@ -160,9 +133,10 @@ const AuthState = (props) => {
       loadUser();
     } catch (err) {
       // Dispatch the action to reducer for LOGIN_FAIL
+      console.log(err)
       dispatch({
         type: LOGIN_FAIL,
-        payload: err.response.data.msg,
+        payload: err.response.data.errors[0].msg,
       });
     }
   };
@@ -211,13 +185,12 @@ const AuthState = (props) => {
         user: state.user,
         error: state.error,
         token: state.token,
-        regStudent,
-        regCounsellor,
+        registerUser,
+        registerMod,
         login,
         loadUser,
         logout,
         clearErrors,
-        regAdmin,
         validate,
       }}
     >
