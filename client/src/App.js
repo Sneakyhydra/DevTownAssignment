@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import PrivateRoute from './components/routing/PrivateRoute';
 
 import Alerts from "./components/layout/Alert/Alerts";
+import Navbar from './components/layout/Navbar/Navbar';
 
 // States
 import AlertState from './context/alert/AlertState';
@@ -24,6 +25,7 @@ const App = () => {
           <UserState>
             <Router>
               <Alerts />
+              <Navbar />
               <Routes>
                 <Route exact path='/' element={<Home />} />
                 <Route
